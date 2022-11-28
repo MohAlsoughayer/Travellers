@@ -9,11 +9,15 @@ from plotnine import ggplot, aes, geom_density, geom_line, geom_point, ggtitle
 import plotly.express as px
 
 # Modeling process
+import xgboost as xgb
 from sklearn.model_selection import train_test_split, KFold, RepeatedKFold, cross_val_score
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn import linear_model
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, roc_auc_score
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline
 # %%
 df = pd.read_csv('../data/final_data.csv')
 # create train/test split
@@ -71,4 +75,37 @@ all_rmse = pd.DataFrame({'k': range(2, 26),
  + geom_point()
  + ggtitle("Cross validated grid search results"))
 # %%
-# Random Forest 
+# GBM
+# create GBM estimator
+xgb_mod = xgb.XGBRegressor()
+
+kfold = KFold(n_splits=5, shuffle=True)
+
+# define hyperparameters
+hyper_grid = {
+  'xgb_mod__n_estimators': [1000, 2500, 5000],
+  'xgb_mod__learning_rate': [0.001, 0.01, 0.1],
+  'xgb_mod__max_depth': [3, 5, 7, 9],
+  'xgb_mod__min_child_weight': [1, 5, 15]
+}
+
+# create random search object
+random_search = RandomizedSearchCV(
+    xgb_mod, 
+    param_distributions=hyper_grid, 
+    n_iter=20, 
+    cv=kfold, 
+    scoring=lossFn, 
+    n_jobs=-1, 
+    random_state=13
+)
+
+# execute random search
+random_search_results = random_search.fit(X_train, y_train)
+
+# best model score
+print(np.abs(random_search_results.best_score_))
+
+# best hyperparameter values
+print(random_search_results.best_params_)
+# %%
