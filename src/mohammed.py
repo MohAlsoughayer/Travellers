@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 import math
-from plotnine import ggplot, aes, geom_density, geom_line, geom_point, ggtitle
+from plotnine import ggplot, aes, geom_density, geom_line, geom_point, ggtitle, labs
 import plotly.express as px
 
 # Modeling process
@@ -167,4 +167,36 @@ print(np.abs(stochastic_random_search_results.best_score_))
 
 # best hyperparameter values
 print(stochastic_random_search_results.best_params_)
+# %%
+# feature interpetations of final model
+# preprocess training data
+X_encoded = preprocessor.fit_transform(X_train)
+
+# create final model object
+final_model = xgb.XGBRegressor(
+    n_estimators=2500,
+    learning_rate=0.01,
+    max_depth=9,
+    min_child_weight=1,
+    subsample=1,
+    colsample_bytree=0.75,
+    colsample_bylevel=0.5,
+    colsample_bynode=1
+)
+
+final_model_fit = final_model.fit(X_encoded, y_train)
+
+# extract feature importances
+vi = pd.DataFrame({'feature': preprocessor.get_feature_names_out(),
+                   'importance': final_model_fit.feature_importances_})
+
+# get top 20 influential features
+top_20_features = vi.nlargest(20, 'importance')
+
+# plot feature importance
+(ggplot(top_20_features, aes(x='importance', y='reorder(feature, importance)'))
+ + geom_point()
+ + labs(y=None))
+
+
 # %%
