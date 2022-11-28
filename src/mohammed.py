@@ -12,6 +12,7 @@ import plotly.express as px
 from sklearn.model_selection import train_test_split, KFold, RepeatedKFold, cross_val_score
 from sklearn.model_selection import GridSearchCV
 from sklearn import linear_model
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, roc_auc_score
 # %%
 df = pd.read_csv('../data/final_data.csv')
@@ -32,6 +33,7 @@ rfk = RepeatedKFold(n_splits=10, n_repeats=5)
 
 # create LM model object
 lm_mod = linear_model.LinearRegression()
+lm_fit = lm_mod.fit(X_train, y_train)
 
 # execute and score the cross validation procedure
 results = cross_val_score(
@@ -41,5 +43,32 @@ results = cross_val_score(
     cv=rfk,
     scoring=lossFn
 )
-results.mean()
+print(results.mean())
+print(lm_fit.coef_)
 # %%
+# K nearest neighbor
+# basic model object
+knn = KNeighborsRegressor()
+
+# Create grid of hyperparameter values
+hyper_grid = {'n_neighbors': range(2, 26)}
+
+# Tune a knn model using grid search
+grid_search = GridSearchCV(knn, hyper_grid, cv=rfk, scoring=lossFn)
+results = grid_search.fit(X_train, y_train)
+
+# Best model's cross validated RMSE
+print(abs(results.best_score_))
+
+# Best model's k value
+print(results.best_estimator_.get_params().get('n_neighbors'))
+# Plot all RMSE results
+all_rmse = pd.DataFrame({'k': range(2, 26), 
+                         'RMSE': np.abs(results.cv_results_['mean_test_score'])})
+
+(ggplot(all_rmse, aes(x='k', y='RMSE'))
+ + geom_line()
+ + geom_point()
+ + ggtitle("Cross validated grid search results"))
+# %%
+# Random Forest 
