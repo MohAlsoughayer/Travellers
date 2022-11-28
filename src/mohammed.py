@@ -16,7 +16,9 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn import linear_model
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, roc_auc_score
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import make_column_selector as selector
+from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 # %%
 df = pd.read_csv('../data/final_data.csv')
@@ -75,11 +77,26 @@ all_rmse = pd.DataFrame({'k': range(2, 26),
  + geom_point()
  + ggtitle("Cross validated grid search results"))
 # %%
-# GBM
+# GBM, part 1 basic GBM to get optimal hyperparameters
 # create GBM estimator
 xgb_mod = xgb.XGBRegressor()
 
+# create 5 fold CV object
 kfold = KFold(n_splits=5, shuffle=True)
+
+# create pre-processing pipeline
+preprocessor = ColumnTransformer(
+  remainder="passthrough",
+  transformers=[
+    ("scale", StandardScaler(), selector(dtype_include="number")),
+    ("one-hot", OneHotEncoder(), selector(dtype_include="object"))
+  ])
+
+# create modeling pipeline
+model_pipeline = Pipeline(steps=[
+  ("preprocessor", preprocessor),
+  ("xgb_mod", xgb_mod),
+])
 
 # define hyperparameters
 hyper_grid = {
@@ -91,7 +108,7 @@ hyper_grid = {
 
 # create random search object
 random_search = RandomizedSearchCV(
-    xgb_mod, 
+    model_pipeline, 
     param_distributions=hyper_grid, 
     n_iter=20, 
     cv=kfold, 
@@ -108,4 +125,46 @@ print(np.abs(random_search_results.best_score_))
 
 # best hyperparameter values
 print(random_search_results.best_params_)
+# %%
+# GBM, part 2 stochastic GBM using optimal hyperparameters
+# create GBM estimator with previous parameter settings
+xgb_mod = xgb.XGBRegressor(
+    n_estimators=2500,
+    learning_rate=0.01,
+    max_depth=9,
+    min_child_weight=1
+)
+
+# create modeling pipeline
+model_pipeline = Pipeline(steps=[
+  ("preprocessor", preprocessor),
+  ("xgb_mod", xgb_mod),
+])
+
+# define stochastic hyperparameters
+stochastic_hyper_grid = {
+  'xgb_mod__subsample': [0.5, 0.75, 1],
+  'xgb_mod__colsample_bytree': [0.5, 0.75, 1],
+  'xgb_mod__colsample_bylevel': [0.5, 0.75, 1],
+  'xgb_mod__colsample_bynode': [0.5, 0.75, 1]
+}
+
+stochastic_random_search = RandomizedSearchCV(
+    model_pipeline, 
+    param_distributions=stochastic_hyper_grid, 
+    n_iter=20, 
+    cv=kfold, 
+    scoring=lossFn, 
+    n_jobs=-1, 
+    random_state=13
+)
+
+# execute random search
+stochastic_random_search_results = stochastic_random_search.fit(X_train, y_train)
+
+# best model score
+print(np.abs(stochastic_random_search_results.best_score_))
+
+# best hyperparameter values
+print(stochastic_random_search_results.best_params_)
 # %%
