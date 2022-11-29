@@ -232,7 +232,7 @@ trace2 = go.Scatter(
 )
 fig = go.Figure()
 fig.add_traces([trace2,trace1])
-fig.update_layout(title = 'Final Model Target Prediction & Actual', yaxis={'title':'Price of Ticket (Rupee)'}, xaxis={'title':'Flight Observation Number'})
+fig.update_layout(title = 'Final Model Test Set Target Prediction & Actual', yaxis={'title':'Price of Ticket (Rupee)'}, xaxis={'title':'Flight Observation Number'})
 fig.show()
 
 # Print RMSE
