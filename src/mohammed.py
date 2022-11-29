@@ -105,10 +105,10 @@ model_pipeline = Pipeline(steps=[
 
 # define hyperparameters
 hyper_grid = {
-  'xgb_mod__n_estimators': [1000, 2500, 5000],
+  'xgb_mod__n_estimators': [i for i in range(100,3001,100)],
   'xgb_mod__learning_rate': [0.001, 0.01, 0.1],
-  'xgb_mod__max_depth': [3, 5, 7, 9],
-  'xgb_mod__min_child_weight': [1, 5, 15]
+  'xgb_mod__max_depth': [i for i in range(1,41,2)],
+  'xgb_mod__min_child_weight': [i for i in range(1,41,4)]
 }
 
 # create random search object
@@ -134,10 +134,10 @@ print(random_search_results.best_params_)
 # GBM, part 2 stochastic GBM using optimal hyperparameters
 # create GBM estimator with previous parameter settings
 xgb_mod = xgb.XGBRegressor(
-    n_estimators=2500,
-    learning_rate=0.01,
-    max_depth=9,
-    min_child_weight=1
+    n_estimators=random_search_results.best_score_['xgb_mod__n_estimators'],
+    learning_rate=random_search_results.best_score_['xgb_mod__learning_rate'],
+    max_depth=random_search_results.best_score_['xgb_mod__max_depth'],
+    min_child_weight=random_search_results.best_score_['xgb_mod__min_child_weight']
 )
 
 # create modeling pipeline
@@ -179,14 +179,14 @@ X_encoded = preprocessor.fit_transform(X_train)
 
 # create final model object
 final_model = xgb.XGBRegressor(
-    n_estimators=2500,
-    learning_rate=0.01,
-    max_depth=9,
-    min_child_weight=1,
-    subsample=1,
-    colsample_bytree=0.75,
-    colsample_bylevel=0.5,
-    colsample_bynode=1
+    n_estimators=random_search_results.best_score_['xgb_mod__n_estimators'],
+    learning_rate=random_search_results.best_score_['xgb_mod__learning_rate'],
+    max_depth=random_search_results.best_score_['xgb_mod__max_depth'],
+    min_child_weight=random_search_results.best_score_['xgb_mod__min_child_weight'],
+    subsample=stochastic_random_search_results.best_params_['xgb_mod__subsample'],
+    colsample_bytree=stochastic_random_search_results.best_params_['xgb_mod__colsample_bytree'],
+    colsample_bylevel=stochastic_random_search_results.best_params_['xgb_mod__colsample_bylevel'],
+    colsample_bynode=stochastic_random_search_results.best_params_['xgb_mod__colsample_bynode']
 )
 
 final_model_fit = final_model.fit(X_encoded, y_train)
