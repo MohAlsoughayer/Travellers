@@ -7,6 +7,8 @@ import pandas as pd
 import math
 from plotnine import ggplot, aes, geom_density, geom_line, geom_point, ggtitle, labs
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Modeling process
 import xgboost as xgb
@@ -21,9 +23,12 @@ from sklearn.compose import make_column_selector as selector
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 # %%
+# read data
 df = pd.read_csv('../data/final_data.csv')
+
 # create train/test split
 train, test = train_test_split(df, train_size=0.7)
+
 # get predictors and response varaibles for each set 
 X_train = train.drop(["Price","year"], axis=1)
 y_train = train[["Price"]]
@@ -198,5 +203,39 @@ top_20_features = vi.nlargest(20, 'importance')
  + geom_point()
  + labs(y=None))
 
+
+# %%
+# Finally, Run test set features on the model and graph target predictions on top of actual values
+# Transform Test set features 
+X_test_encoded = preprocessor.transform(X_test)
+
+# Run final model on transformed X
+y_predicted = final_model_fit.predict(X_test_encoded)
+ovservations = np.arange(1,3140)
+
+# Plot target predicted and actual values
+trace1 = go.Scatter(
+    x=ovservations,
+    y=y_predicted,
+    name='target prediction',
+    marker=dict(
+        color='rgb(0,0,204)'
+               )
+)
+trace2 = go.Scatter(
+    x=ovservations,
+    y=y_test.values.ravel(),
+    name='target actual',
+    marker=dict(
+        color='rgb(204,0,0)'
+               )
+)
+fig = go.Figure()
+fig.add_traces([trace2,trace1])
+fig.update_layout(title = 'Final Model Target Prediction & Actual', yaxis={'title':'Price of Ticket (Rupee)'}, xaxis={'title':'Flight Observation Number'})
+fig.show()
+
+# Print RMSE
+print("Root mean squared error: ", math.sqrt(mean_squared_error(y_test.values.ravel(), y_predicted)))
 
 # %%
