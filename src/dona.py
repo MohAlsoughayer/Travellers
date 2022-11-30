@@ -133,48 +133,27 @@ y_test = test[["Price"]]
 
 
 
+# %%
+# Multiple linear regression with kfold repeat (10 folds, 5 repeats)
+# define loss function
+lossFn = 'neg_root_mean_squared_error'
 
+# create 10 fold CV object
+rfk = RepeatedKFold(n_splits=10, n_repeats=5)
 
-#%%
+# create LM model object
+lm_mod = linear_model.LinearRegression()
+lm_fit = lm_mod.fit(X_train, y_train)
 
-
-# Step 2: standardize features
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-
-# Step 3: create model object
-en_mod = ElasticNet(alpha=1)
-
-# Step 4: fit/train model
-en_fit = en_mod.fit(X_train_scaled, y_train)
-
-
-#%%
-en_fit.coef_
-
-#%%
-pred = en_fit.predict(X_train)
-
-#%%
-# compute RMSE
-lossfunc = 'neg_root_mean_squared_error'
-
-
-#%%
-kfold = KFold(n_splits=5, random_state=123, shuffle=True)
-
-# Create grid of hyperparameter values
-hyper_grid = {'alpha': 10**np.linspace(10, -5, 50)*0.5}
-
-#%%
-
-grid_search = GridSearchCV(en_mod, hyper_grid, cv=kfold, scoring=lossfunc)
-results = grid_search.fit(X_train, y_train)
-
-# Optimal penalty parameter in grid search
-results.best_estimator_
-
-
-#%%
-# Best model's cross validated RMSE
-round(abs(results.best_score_), 2)
+# execute and score the cross validation procedure
+results = cross_val_score(
+    estimator=lm_mod,
+    X=X_train,
+    y=y_train,
+    cv=rfk,
+    scoring=lossFn
+)
+print(-results.mean())
+print(lm_fit.coef_)
+# %%
+df.head(1)
